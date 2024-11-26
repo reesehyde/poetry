@@ -478,67 +478,32 @@ For example, consider the following dependency:
 ```toml
 [project.optional-dependencies]
 paths = [
-    "pathlib2 (>=2.2,<3.0) ; sys_platform == 'win32'"
+    "pathlib2 (>=2.2,<3.0) ; sys_platform == 'win32' and extra == 'paths'"
 ]
 ```
 
-`pathlib2` will be installed when you install your package with `--extras paths` on a `win32` machine.
+`pathlib2` will be installed when you install your package with `--extras paths` on a `win32` machine. The 
+`and extra == 'paths'` marker is redundant in this case (since `paths = [...` already applies this restriction), but 
+extra markers can be valuable in more complex cases as described below.
 
 #### Exclusive extras
 
 Keep in mind that all combinations of possible extras available in your project need to be compatible with each other.
 This means that in order to use differing or incompatible versions across different combinations, you need to make your
 extra markers *exclusive*. For example, the following installs PyTorch from one source repository with CPU versions
-when the `cuda` extra is *not* specified, while the other installs from another repository with a separate version set
-for GPUs when the `cuda` extra *is* specified:
-
-```toml
-[project]
-dependencies = [
-    "torch (==2.3.1+cpu) ; extra != 'cuda'",
-]
-
-[project.optional-dependencies]
-cuda = [
-    "torch (==2.3.1+cu118)",
-]
-
-[tool.poetry.dependencies]
-torch = [
-    { markers = "extra != 'cuda'", source = "pytorch-cpu"},
-    { markers = "extra == 'cuda'", source = "pytorch-cu118"},
- ]
-
-[[tool.poetry.source]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-priority = "explicit"
-
-[[tool.poetry.source]]
-name = "pytorch-cu118"
-url = "https://download.pytorch.org/whl/cu118"
-priority = "explicit"
-```
-
-For the CPU case, we have to specify `"extra != 'cuda'"` because the version specified is not compatible with the
-GPU (`cuda`) version.
-
-This same logic applies when you want either-or extras:
+when the `cpu` extra is specified, while the other installs from another repository with a separate version set
+for GPUs when the `cuda` extra is specified:
 
 ```toml
 [project.optional-dependencies]
-cuda = [
-    "torch (==2.3.1+cu118) ; extra != 'cpu'",
-]
-cpu = [
-    "torch (==2.3.1+cpu) ; extra != 'cuda'",
-]
+cpu = [ "torch (==2.3.1+cpu)" ]
+cuda = [ "torch (==2.3.1+cu118)" ]
 
 [tool.poetry.dependencies]
 torch = [
     { markers = "extra == 'cpu' and extra != 'cuda'", source = "pytorch-cpu"},
-    { markers = "extra == 'cuda' and extra != 'cpu'", source = "pytorch-cu118"},
- ]
+    { markers = "extra != 'cpu' and extra == 'cuda'", source = "pytorch-cuda"},
+]
 
 [[tool.poetry.source]]
 name = "pytorch-cpu"
@@ -550,6 +515,10 @@ name = "pytorch-cu118"
 url = "https://download.pytorch.org/whl/cu118"
 priority = "explicit"
 ```
+
+For the CPU case, we have to specify both `"extra == 'cpu' and extra != 'cuda'"` because the version specified is not 
+compatible with the GPU (`cuda`) version. The inverse is true for the GPU (`cuda`) case.
+
 
 ## Multiple constraints dependencies
 
